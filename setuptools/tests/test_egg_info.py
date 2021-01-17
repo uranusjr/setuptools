@@ -887,6 +887,16 @@ class TestEggInfo:
             assert output in data
 
     @pytest.mark.parametrize(
+        ('version', 'tag_build', 'tagged_version'),
+        [
+            ('1.0.0', 'dev', '1.0.0.dev0'),
+            ('1.0.0beta', 'dev', '1.0.0b0.dev0'),
+            ('1.0.0dev', 'dev', '1.0.0.dev0'),
+            ('1.0.0', 'beta', '1.0.0b0'),
+            ('1.0.0beta', 'beta', '1.0.0b0'),
+        ],
+    )
+    @pytest.mark.parametrize(
         ('make_metadata_path', 'run_command'),
         [
             (
@@ -901,21 +911,26 @@ class TestEggInfo:
         ],
     )
     def test_egg_info_tag_only_once(
-            self, tmpdir_cwd, env, make_metadata_path, run_command):
+            self, tmpdir_cwd, env,
+            version, tag_build, tagged_version,
+            make_metadata_path, run_command):
         self._create_project()
         build_files({
             'setup.cfg': DALS("""
-                              [egg_info]
-                              tag_build = dev
-                              tag_date = 0
-                              tag_svn_revision = 0
-                              """),
+                [metadata]
+                version = {version}
+
+                [egg_info]
+                tag_build = {tag_build}
+                tag_date = 0
+                tag_svn_revision = 0
+                """.format(tag_build=tag_build, version=version)),
         })
         self._run_egg_info_command(tmpdir_cwd, env)
         egg_info_dir = os.path.join('.', 'foo.egg-info')
         with open(os.path.join(egg_info_dir, 'PKG-INFO')) as pkginfo_file:
             pkg_info_lines = pkginfo_file.read().split('\n')
-        assert 'Version: 0.0.0.dev0' in pkg_info_lines
+        assert 'Version: {}'.format(tagged_version) in pkg_info_lines
 
     def test_get_pkg_info_revision_deprecated(self):
         pytest.warns(EggInfoDeprecationWarning, get_pkg_info_revision)
