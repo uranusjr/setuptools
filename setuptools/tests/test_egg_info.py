@@ -6,6 +6,7 @@ import re
 import stat
 import time
 
+from setuptools.build_meta import prepare_metadata_for_build_wheel
 from setuptools.command.egg_info import (
     egg_info, manifest_maker, EggInfoDeprecationWarning, get_pkg_info_revision,
 )
@@ -865,7 +866,8 @@ class TestEggInfo:
             sources = f.read().split('\n')
             assert 'setup.py' in sources
 
-    def _run_egg_info_command(self, tmpdir_cwd, env, cmd=None, output=None):
+    @staticmethod
+    def _run_egg_info_command(tmpdir_cwd, env, cmd=None, output=None):
         environ = os.environ.copy().update(
             HOME=env.paths['home'],
         )
@@ -884,7 +886,22 @@ class TestEggInfo:
         if output:
             assert output in data
 
-    def test_egg_info_tag_only_once(self, tmpdir_cwd, env):
+    @pytest.mark.parametrize(
+        ('make_metadata_path', 'run_command'),
+        [
+            (
+                lambda env: os.path.join('.', 'foo.egg-info', 'PKG-INFO'),
+                lambda tmpdir_cwd, env:
+                    TestEggInfo._run_egg_info_command(tmpdir_cwd, env)
+            ),
+            (
+                lambda env: os.path.join(env, 'foo.dist-info', 'METADATA'),
+                lambda tmpdir_cwd, env: prepare_metadata_for_build_wheel(env)
+            ),
+        ],
+    )
+    def test_egg_info_tag_only_once(
+            self, tmpdir_cwd, env, make_metadata_path, run_command):
         self._create_project()
         build_files({
             'setup.cfg': DALS("""
