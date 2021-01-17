@@ -124,7 +124,7 @@ class InfoCommon:
         return safe_name(self.distribution.get_name())
 
     def tagged_version(self):
-        return safe_version(self._maybe_tag(self.distribution.get_version()))
+        return self._maybe_tag(self.distribution.get_version())
 
     def _maybe_tag(self, version):
         """
@@ -200,7 +200,7 @@ class egg_info(InfoCommon, Command):
         # `self.distribution.metadata.version` without
         # repercussions.
         self.egg_name = self.name
-        self.egg_version = self.tagged_version()
+        self.egg_version = safe_version(self.tagged_version())
         parsed_version = parse_version(self.egg_version)
 
         try:
